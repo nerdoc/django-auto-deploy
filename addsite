@@ -21,12 +21,12 @@ do
 	*) echo -e "${RED}Error...${STD}" && sleep 1
 	esac
 done
-if [[ $DBPACKAGE == "mysql-server" || $DBPACKAGE == "mariadb-server" ]]; then
+if [ "$DBPACKAGE" = "mysql-server" ] || [ "$DBPACKAGE" = "mariadb-server" ]; then
     DBCONNECTOR="mysqlclient"
     DBENGINE="django.db.backends.mysql"
     DBPORT="3306"
 fi
-if [[ $DBPACKAGE == "postgresql postgresql-contrib" ]]; then
+if [ "$DBPACKAGE" = "postgresql postgresql-contrib" ]; then
     DBCONNECTOR="psycopg2-binary"
     DBENGINE="django.db.backends.postgresql_psycopg2"
     DBPORT="5432"
