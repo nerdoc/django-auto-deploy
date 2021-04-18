@@ -38,40 +38,40 @@ read SITENAME
 echo -n "Enter your domain name:"
 read DOMAIN
 
-# Check if the /var/www/$SITENAME dir exists
-if [ -d "${ROOTDIR}${SITENAME}" ]; then
-    echo "Error: directory /var/www/$SITENAME already exists"
+HOMEDIR=${ROOTDIR}${SITENAME}
+# Check if the ${HOMEDIR} dir exists
+if [ -d "${HOMEDIR}" ]; then
+    echo "Error: directory ${HOMEDIR} already exists"
     exit 1
 fi
 
 # Creating the working directory
-HOMEDIR=${ROOTDIR}${SITENAME}
-mkdir -p /var/www/$SITENAME
+mkdir -p ${HOMEDIR}
 
 # Create a new Linux user and add it to sftp group
 echo "Creating user $SITENAME..."
 groupadd sftp 2> /dev/null
-useradd $SITENAME -m -G sftp -s "/bin/false" -d "/var/www/$SITENAME" 2> $HOMEDIR/deploy.log
+useradd $SITENAME -m -G sftp -s "/bin/false" -d "/var/www/$SITENAME" 2> ${HOMEDIR}/deploy.log
 if [ "$?" -ne 0 ]; then
 	echo "Can't add user"
 fi
 echo $SFTPPASS > ./tmp
 echo $SFTPPASS >> ./tmp
-cat ./tmp | passwd $SITENAME 2>> $HOMEDIR/deploy.log
+cat ./tmp | passwd $SITENAME 2>> ${HOMEDIR}/deploy.log
 rm ./tmp
 
 
 # Install necessary dependencies and log to deploy.log
 echo "Installing Nginx, Python pip, and database server..."
-apt install -y nginx python3-pip $DBPACKAGE libmysqlclient-dev &> $HOMEDIR/deploy.log
-pip3 install virtualenv >> $HOMEDIR/deploy.log
+apt install -y nginx python3-pip $DBPACKAGE libmysqlclient-dev &> ${HOMEDIR}/deploy.log
+pip3 install virtualenv >> ${HOMEDIR}/deploy.log
 
 # Setup Python virtual environment, Django, Gunicorn, and Python MySQL connector
-mkdir -p $HOMEDIR/env 
+mkdir -p ${HOMEDIR}/env 
 echo "Trying to set up a virtual environment..."
-virtualenv -p python3 $HOMEDIR/env >> $HOMEDIR/deploy.log
-source $HOMEDIR/env/bin/activate
-pip install gunicorn django $DBCONNECTOR >> $HOMEDIR/deploy.log
+virtualenv -p python3 ${HOMEDIR}/env >> ${HOMEDIR}/deploy.log
+source ${HOMEDIR}/env/bin/activate
+pip install gunicorn django $DBCONNECTOR >> ${HOMEDIR}/deploy.log
 cd ${HOMEDIR}
 django-admin.py startproject app .
 cd ${ROOTDIR}
@@ -94,14 +94,14 @@ echo "server {
     add_header X-XSS-Protection '1; mode=block';
 
     location /static/ {
-        root /var/www/$SITENAME;
+        root ${HOMEDIR};
 	expires 30d;
         log_not_found off;
         access_log off;
     }
 
     location /media/ {
-        root /var/www/$SITENAME;
+        root ${HOMEDIR};
 	expires 30d;
         log_not_found off;
         access_log off;
@@ -112,7 +112,7 @@ echo "server {
         proxy_pass http://unix:/run/gunicorn_$SITENAME.sock;
     }
 }" > /etc/nginx/sites-available/$SITENAME.conf
-ln -s /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf >> $HOMEDIR/deploy.log
+ln -s /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf >> ${HOMEDIR}/deploy.log
 systemctl restart nginx
 
 # Create Gunicorn config file
@@ -125,7 +125,7 @@ After=network.target
 User=$USER
 Group=www-data
 WorkingDirectory=${HOMEDIR}
-ExecStart=$HOMEDIR/env/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn_$SITENAME.sock app.wsgi:application
+ExecStart=${HOMEDIR}/env/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn_$SITENAME.sock app.wsgi:application
 
 [Install]
 WantedBy=multi-user.target
@@ -186,12 +186,12 @@ db.sqlite3
 migrations/
 media/
 env/"
-echo $GIT_IGNORE > /var/www/$SITENAME/.gitignore
+echo $GIT_IGNORE > $HOMEDIR/.gitignore
 
 # Assigning permissions to the working directory
-chmod -R 755 /var/www/$SITENAME/
-chown -R $SITENAME:$SITENAME /var/www/$SITENAME/
-chown root:root /var/www/$SITENAME
+chmod -R 755 $HOMEDIR/
+chown -R $SITENAME:$SITENAME $HOMEDIR/
+chown root:root $HOMEDIR
 
 # collect static files
 cd $HOMEDIR
