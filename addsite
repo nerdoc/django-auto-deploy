@@ -134,7 +134,7 @@ echo "server {
         proxy_pass http://unix:/run/gunicorn_$SITENAME.sock;
     }
 }" > /etc/nginx/sites-available/$SITENAME.conf
-ln -s /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf >> ${HOMEDIR}/deploy.log
+ln -sf /etc/nginx/sites-available/$SITENAME.conf /etc/nginx/sites-enabled/$SITENAME.conf >> ${HOMEDIR}/deploy.log
 systemctl restart nginx
 
 # Create Gunicorn config file
